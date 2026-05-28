@@ -1,3 +1,5 @@
+// © GoodHatsLLC
+
 import Foundation
 
 struct InfoCollector {
@@ -6,7 +8,7 @@ struct InfoCollector {
 
   init(repositoryURL: URL, gitURL: URL? = nil) {
     self.repositoryURL = repositoryURL
-    self.gitURLOverride = gitURL
+    gitURLOverride = gitURL
   }
 
   func collect() throws -> GitRevInfo {
@@ -68,18 +70,18 @@ struct InfoCollector {
 
   private static func resolveExecutableInPath(
     command: String,
-    environment: [String: String]
+    environment: [String: String],
   ) -> URL? {
     guard let pathValue = environment["PATH"], !pathValue.isEmpty else {
       return nil
     }
 
     let separator: Character = {
-#if os(Windows)
-      return ";"
-#else
-      return ":"
-#endif
+      #if os(Windows)
+        return ";"
+      #else
+        return ":"
+      #endif
     }()
 
     let candidates = executableCandidates(for: command, environment: environment)
@@ -103,80 +105,84 @@ struct InfoCollector {
 
   private static func executableCandidates(
     for command: String,
-    environment: [String: String]
+    environment: [String: String],
   ) -> [String] {
-#if os(Windows)
-    let extensionValue = URL(fileURLWithPath: command).pathExtension
-    if !extensionValue.isEmpty {
-      return [command]
-    }
+    #if os(Windows)
+      let extensionValue = URL(fileURLWithPath: command).pathExtension
+      if !extensionValue.isEmpty {
+        return [command]
+      }
 
-    return windowsExecutableExtensions(environment: environment).map { command + $0 }
-#else
-    return [command]
-#endif
+      return windowsExecutableExtensions(environment: environment).map { command + $0 }
+    #else
+      return [command]
+    #endif
   }
 
   private static func isExecutableFile(at url: URL, environment: [String: String]) -> Bool {
-#if os(Windows)
-    var isDirectory: ObjCBool = false
-    guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-      !isDirectory.boolValue
-    else {
-      return false
-    }
+    #if os(Windows)
+      var isDirectory: ObjCBool = false
+      guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+        !isDirectory.boolValue
+      else {
+        return false
+      }
 
-    let ext = "." + url.pathExtension.lowercased()
-    return windowsExecutableExtensions(environment: environment).contains(ext)
-#else
-    return FileManager.default.isExecutableFile(atPath: url.path)
-#endif
+      let ext = "." + url.pathExtension.lowercased()
+      return windowsExecutableExtensions(environment: environment).contains(ext)
+    #else
+      return FileManager.default.isExecutableFile(atPath: url.path)
+    #endif
   }
 
-#if os(Windows)
-  private static func windowsExecutableExtensions(environment: [String: String]) -> [String] {
-    if let pathext = environment["PATHEXT"], !pathext.isEmpty {
-      return pathext
-        .split(separator: ";")
-        .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-        .filter { !$0.isEmpty }
-        .map { value in
-          let lowercased = value.lowercased()
-          return lowercased.hasPrefix(".") ? lowercased : ".\(lowercased)"
-        }
+  #if os(Windows)
+    private static func windowsExecutableExtensions(environment: [String: String]) -> [String] {
+      if let pathext = environment["PATHEXT"], !pathext.isEmpty {
+        return
+          pathext
+          .split(separator: ";")
+          .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+          .filter { !$0.isEmpty }
+          .map { value in
+            let lowercased = value.lowercased()
+            return lowercased.hasPrefix(".") ? lowercased : ".\(lowercased)"
+          }
+      }
+      return [".exe", ".cmd", ".bat", ".com"]
     }
-    return [".exe", ".cmd", ".bat", ".com"]
-  }
-#endif
+  #endif
 
   private static func fallbackGitPaths() -> [String] {
-#if os(macOS)
-    return ["/usr/bin/git", "/usr/local/bin/git", "/opt/homebrew/bin/git"]
-#elseif os(Linux)
-    return ["/usr/bin/git", "/usr/local/bin/git", "/bin/git"]
-#elseif os(Windows)
-    return [
-      "C:\\Program Files\\Git\\cmd\\git.exe",
-      "C:\\Program Files\\Git\\bin\\git.exe",
-      "C:\\Program Files (x86)\\Git\\cmd\\git.exe",
-      "C:\\Program Files (x86)\\Git\\bin\\git.exe",
-    ]
-#else
-    return ["/usr/bin/git"]
-#endif
+    #if os(macOS)
+      return ["/usr/bin/git", "/usr/local/bin/git", "/opt/homebrew/bin/git"]
+    #elseif os(Linux)
+      return ["/usr/bin/git", "/usr/local/bin/git", "/bin/git"]
+    #elseif os(Windows)
+      return [
+        "C:\\Program Files\\Git\\cmd\\git.exe",
+        "C:\\Program Files\\Git\\bin\\git.exe",
+        "C:\\Program Files (x86)\\Git\\cmd\\git.exe",
+        "C:\\Program Files (x86)\\Git\\bin\\git.exe",
+      ]
+    #else
+      return ["/usr/bin/git"]
+    #endif
   }
 
   private func validateRepository(gitURL: URL) throws {
     var isDirectory: ObjCBool = false
-    guard FileManager.default.fileExists(atPath: repositoryURL.path, isDirectory: &isDirectory),
+    guard
+      unsafe FileManager.default.fileExists(atPath: repositoryURL.path, isDirectory: &isDirectory),
       isDirectory.boolValue
     else {
       throw CollectorError.repositoryPathInvalid(path: repositoryURL.path)
     }
 
-    let result = try runGit(arguments: [
-      "rev-parse", "--is-inside-work-tree", "--is-bare-repository",
-    ], gitURL: gitURL)
+    let result = try runGit(
+      arguments: [
+        "rev-parse", "--is-inside-work-tree", "--is-bare-repository",
+      ], gitURL: gitURL,
+    )
     guard result.exitCode == 0 else {
       throw mapGitFailure(result)
     }
@@ -256,7 +262,7 @@ struct InfoCollector {
       authorDate: Date(timeIntervalSince1970: authorSeconds),
       commitDate: Date(timeIntervalSince1970: committerSeconds),
       shortHash: shortHash,
-      hash: fullHash
+      hash: fullHash,
     )
   }
 
@@ -280,21 +286,22 @@ struct InfoCollector {
     environment["LC_ALL"] = "C"
     process.environment = environment
 
-#if os(Windows)
-    if isCommandScript(gitURL) {
-      guard let commandInterpreter = Self.resolveCommandInterpreter(environment: environment) else {
-        throw CollectorError.executableNotFound(path: "cmd.exe")
+    #if os(Windows)
+      if isCommandScript(gitURL) {
+        guard let commandInterpreter = Self.resolveCommandInterpreter(environment: environment)
+        else {
+          throw CollectorError.executableNotFound(path: "cmd.exe")
+        }
+        process.executableURL = commandInterpreter
+        process.arguments = ["/C", gitURL.path] + arguments
+      } else {
+        process.executableURL = gitURL
+        process.arguments = arguments
       }
-      process.executableURL = commandInterpreter
-      process.arguments = ["/C", gitURL.path] + arguments
-    } else {
+    #else
       process.executableURL = gitURL
       process.arguments = arguments
-    }
-#else
-    process.executableURL = gitURL
-    process.arguments = arguments
-#endif
+    #endif
     process.currentDirectoryURL = repositoryURL
 
     let stdout = Pipe()
@@ -318,33 +325,33 @@ struct InfoCollector {
     return GitCommandResult(
       stdout: stdoutString,
       stderr: stderrString,
-      exitCode: process.terminationStatus
+      exitCode: process.terminationStatus,
     )
   }
 
-#if os(Windows)
-  private func isCommandScript(_ url: URL) -> Bool {
-    let ext = url.pathExtension.lowercased()
-    return ext == "cmd" || ext == "bat"
-  }
-
-  private static func resolveCommandInterpreter(
-    environment: [String: String]
-  ) -> URL? {
-    if let comspec = environment["COMSPEC"], !comspec.isEmpty,
-      let resolved = resolveExecutable(named: comspec, environment: environment)
-    {
-      return resolved
+  #if os(Windows)
+    private func isCommandScript(_ url: URL) -> Bool {
+      let ext = url.pathExtension.lowercased()
+      return ext == "cmd" || ext == "bat"
     }
-    return resolveExecutable(named: "cmd.exe", environment: environment)
-  }
-#endif
+
+    private static func resolveCommandInterpreter(
+      environment: [String: String],
+    ) -> URL? {
+      if let comspec = environment["COMSPEC"], !comspec.isEmpty,
+        let resolved = resolveExecutable(named: comspec, environment: environment)
+      {
+        return resolved
+      }
+      return resolveExecutable(named: "cmd.exe", environment: environment)
+    }
+  #endif
 
   private func formatGitFailure(_ result: GitCommandResult) -> String {
     let stdout = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     let stderr = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
 
-    if stdout.isEmpty && stderr.isEmpty {
+    if stdout.isEmpty, stderr.isEmpty {
       return "git command failed with no output"
     }
     if stdout.isEmpty {
@@ -373,11 +380,11 @@ struct InfoCollector {
   private func parseGitBoolean(_ value: String) -> Bool? {
     switch value {
     case "true":
-      return true
+      true
     case "false":
-      return false
+      false
     default:
-      return nil
+      nil
     }
   }
 
@@ -390,7 +397,8 @@ struct InfoCollector {
     }
     if isPermissionDeniedMessage(stdout: result.stdout, stderr: result.stderr) {
       return .repositoryPermissionDenied(
-        path: repositoryURL.path, message: formatGitFailure(result))
+        path: repositoryURL.path, message: formatGitFailure(result),
+      )
     }
     if isNotRepositoryMessage(stdout: result.stdout, stderr: result.stderr) {
       return .notAGitRepository(path: repositoryURL.path)
@@ -442,23 +450,23 @@ enum CollectorError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .executableNotFound(let path):
-      return "git executable not found or not executable at \(path)"
+      "git executable not found or not executable at \(path)"
     case .repositoryPathInvalid(let path):
-      return "repository path '\(path)' is not a directory"
+      "repository path '\(path)' is not a directory"
     case .notAGitRepository(let path):
-      return "path '\(path)' is not a Git repository"
+      "path '\(path)' is not a Git repository"
     case .unsafeRepository(let path, let message):
-      return "git refused repository '\(path)' due to unsafe ownership: \(message)"
+      "git refused repository '\(path)' due to unsafe ownership: \(message)"
     case .repositoryPermissionDenied(let path, let message):
-      return "permission denied while accessing repository '\(path)': \(message)"
+      "permission denied while accessing repository '\(path)': \(message)"
     case .gitNotAvailable(let message):
-      return "git is not available: \(message)"
+      "git is not available: \(message)"
     case .noCommit:
-      return "repository has no commits"
+      "repository has no commits"
     case .gitFailed(let message):
-      return "git command failed: \(message)"
+      "git command failed: \(message)"
     case .unexpectedOutput(let message):
-      return "unexpected git output: \(message)"
+      "unexpected git output: \(message)"
     }
   }
 }

@@ -11,28 +11,46 @@ let package = Package(
   products: [
     .plugin(
       name: "GitRevisionInfo",
-      targets: ["GitRevisionInfo"]
-    ),
+      targets: ["GitRevisionInfo"],
+    )
   ],
   targets: [
     .executableTarget(
       name: "Generator",
       swiftSettings: [
         .swiftLanguageMode(.v6),
-        .enableUpcomingFeature("StrictConcurrency"),
-      ]
+        .strictMemorySafety(),
+        .defaultIsolation(.none),
+        .enableUpcomingFeature("ExistentialAny"),
+        .enableUpcomingFeature("ImmutableWeakCaptures"),
+        .enableUpcomingFeature("InferIsolatedConformances"),
+        .enableUpcomingFeature("InternalImportsByDefault"),
+        .enableUpcomingFeature("MemberImportVisibility"),
+        .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+      ],
     ),
     .plugin(
       name: "GitRevisionInfo",
       capability: .buildTool(),
       dependencies: [
         .target(name: "Generator")
-      ]
+      ],
     ),
     .testTarget(
       name: "GeneratorTests",
-      dependencies: ["Generator"]
+      dependencies: ["Generator"],
+      swiftSettings: [
+        .swiftLanguageMode(.v6),
+        .strictMemorySafety(),
+        .defaultIsolation(.none),
+        .enableUpcomingFeature("ExistentialAny"),
+        .enableUpcomingFeature("ImmutableWeakCaptures"),
+        .enableUpcomingFeature("InferIsolatedConformances"),
+        .enableUpcomingFeature("InternalImportsByDefault"),
+        .enableUpcomingFeature("MemberImportVisibility"),
+        .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+      ],
     ),
   ],
-  swiftLanguageModes: [.v6]
+  swiftLanguageModes: [.v6],
 )

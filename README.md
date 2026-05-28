@@ -1,13 +1,12 @@
 # swift-git-revision
 
-Capture your build time git revision details for runtime use and display.   
-A Swift Package Manager plugin.
+Swift Package Manager plugin which captures your build time git revision details for runtime use and display.
 
 ## Swift Package Manager
 
 ### 1) Add the plugin to your `Package.swift`.
 
-Add the package to your `Package.swift` dependencies and the plugin to your target.
+Add the package to your `Package.swift`:
 
 ```swift
 // swift-tools-version: 6.2
@@ -20,7 +19,7 @@ let package = Package(
     targets: ["MyTarget"]
   ),
   dependencies: [
-    .package(url: "https://github.com/username/swift-git-revision.git", from: "0.1.0")
+    .package(url: "https://github.com/your-org/swift-git-revision.git", from: "0.1.0")
   ],
   targets: [
     .executableTarget(
@@ -42,6 +41,8 @@ was generated.
 let info = try GitRevInfo.current
 print(info.hash)
 ```
+
+(If your load call is throwing it's almost certainly because you're making it from a module not calling `.plugin(name:package:)`.)
 
 ## Xcode Project
 

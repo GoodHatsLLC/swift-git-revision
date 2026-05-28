@@ -1,7 +1,9 @@
+// © GoodHatsLLC
+
 import Foundation
 
 /// Build-time representation of Git revision metadata.
-struct GitRevInfo: Codable, Sendable {
+struct GitRevInfo: Codable {
   /// Details for the most recent commit.
   let lastCommit: Commit
   /// Current branch name, or nil for detached HEAD.
@@ -26,7 +28,7 @@ struct GitRevInfo: Codable, Sendable {
 
 extension GitRevInfo {
   /// Metadata for a Git commit.
-  struct Commit: Codable, Sendable {
+  struct Commit: Codable {
     /// Commit author identity.
     let author: User
     /// Committer identity.
@@ -41,29 +43,10 @@ extension GitRevInfo {
     let shortHash: String
     /// Full commit hash.
     let hash: String
-
-    /// Creates commit metadata.
-    init(
-      author: User,
-      committer: User,
-      subject: String?,
-      authorDate: Date,
-      commitDate: Date,
-      shortHash: String,
-      hash: String
-    ) {
-      self.author = author
-      self.committer = committer
-      self.subject = subject
-      self.authorDate = authorDate
-      self.commitDate = commitDate
-      self.shortHash = shortHash
-      self.hash = hash
-    }
   }
 
   /// A Git user identity.
-  struct User: Codable, Sendable, CustomStringConvertible {
+  struct User: Codable, CustomStringConvertible {
     /// User name.
     let name: String
     /// User email.

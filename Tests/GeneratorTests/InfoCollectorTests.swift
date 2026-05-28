@@ -1,3 +1,5 @@
+// © GoodHatsLLC
+
 import Foundation
 import XCTest
 
@@ -92,7 +94,7 @@ final class InfoCollectorTests: XCTestCase {
 
     let (scriptDirectory, gitURL) = try makeGitStub(
       stderr: "xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools)",
-      exitCode: 1
+      exitCode: 1,
     )
     defer { try? FileManager.default.removeItem(at: scriptDirectory) }
 
@@ -111,7 +113,7 @@ final class InfoCollectorTests: XCTestCase {
 
     let (scriptDirectory, gitURL) = try makeGitStub(
       stderr: "fatal: detected dubious ownership in repository at '$PWD'",
-      exitCode: 128
+      exitCode: 128,
     )
     defer { try? FileManager.default.removeItem(at: scriptDirectory) }
 
@@ -130,7 +132,7 @@ final class InfoCollectorTests: XCTestCase {
 
     let (scriptDirectory, gitURL) = try makeGitStub(
       stderr: "fatal: unable to access '.git': Permission denied",
-      exitCode: 128
+      exitCode: 128,
     )
     defer { try? FileManager.default.removeItem(at: scriptDirectory) }
 
@@ -149,7 +151,7 @@ final class InfoCollectorTests: XCTestCase {
 
     let (scriptDirectory, gitURL) = try makeGitStub(
       stderr: "fatal: something went wrong",
-      exitCode: 1
+      exitCode: 1,
     )
     defer { try? FileManager.default.removeItem(at: scriptDirectory) }
 
@@ -168,7 +170,7 @@ final class InfoCollectorTests: XCTestCase {
 
     let (scriptDirectory, gitURL) = try makeGitStub(
       stdout: "true",
-      exitCode: 0
+      exitCode: 0,
     )
     defer { try? FileManager.default.removeItem(at: scriptDirectory) }
 
@@ -188,7 +190,8 @@ final class InfoCollectorTests: XCTestCase {
     let workURL = baseURL.appending(path: "work")
     let bareURL = baseURL.appending(path: "bare.git")
     try FileManager.default.createDirectory(
-      at: workURL, withIntermediateDirectories: true, attributes: nil)
+      at: workURL, withIntermediateDirectories: true, attributes: nil,
+    )
 
     let harness = try GitTestHarness()
     try harness.initializeRepository(at: workURL)
@@ -208,84 +211,85 @@ private func makeTemporaryDirectory() throws -> URL {
     .appending(path: "swift-git-revision-")
     .appending(path: UUID().uuidString)
   try FileManager.default.createDirectory(
-    at: url, withIntermediateDirectories: true, attributes: nil)
+    at: url, withIntermediateDirectories: true, attributes: nil,
+  )
   return url
 }
 
 private func makeGitStub(
   stdout: String = "",
   stderr: String = "",
-  exitCode: Int32
+  exitCode: Int32,
 ) throws -> (directory: URL, gitURL: URL) {
   let directory = try makeTemporaryDirectory()
-#if os(Windows)
-  let scriptURL = directory.appending(path: "git.cmd")
-  let script = makeWindowsGitStub(stdout: stdout, stderr: stderr, exitCode: exitCode)
-  try script.write(to: scriptURL, atomically: true, encoding: .utf8)
-  return (directory, scriptURL)
-#else
-  let scriptURL = directory.appending(path: "git")
-  let script = makeUnixGitStub(stdout: stdout, stderr: stderr, exitCode: exitCode)
-  try script.write(to: scriptURL, atomically: true, encoding: .utf8)
-  try FileManager.default.setAttributes(
-    [.posixPermissions: 0o755],
-    ofItemAtPath: scriptURL.path
-  )
-  return (directory, scriptURL)
-#endif
+  #if os(Windows)
+    let scriptURL = directory.appending(path: "git.cmd")
+    let script = makeWindowsGitStub(stdout: stdout, stderr: stderr, exitCode: exitCode)
+    try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+    return (directory, scriptURL)
+  #else
+    let scriptURL = directory.appending(path: "git")
+    let script = makeUnixGitStub(stdout: stdout, stderr: stderr, exitCode: exitCode)
+    try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+    try FileManager.default.setAttributes(
+      [.posixPermissions: 0o755],
+      ofItemAtPath: scriptURL.path,
+    )
+    return (directory, scriptURL)
+  #endif
 }
 
 #if os(Windows)
-private func makeWindowsGitStub(stdout: String, stderr: String, exitCode: Int32) -> String {
-  var script = "@echo off\n"
-  script += windowsEchoLines(stdout, toStdErr: false)
-  script += windowsEchoLines(stderr, toStdErr: true)
-  script += "exit /b \(exitCode)\n"
-  return script
-}
-
-private func windowsEchoLines(_ message: String, toStdErr: Bool) -> String {
-  guard !message.isEmpty else { return "" }
-  let lines = message.split(whereSeparator: \.isNewline)
-  var output = ""
-  for line in lines {
-    let escaped = escapeForCmdEcho(String(line))
-    if toStdErr {
-      output += "echo \(escaped) 1>&2\n"
-    } else {
-      output += "echo \(escaped)\n"
-    }
+  private func makeWindowsGitStub(stdout: String, stderr: String, exitCode: Int32) -> String {
+    var script = "@echo off\n"
+    script += windowsEchoLines(stdout, toStdErr: false)
+    script += windowsEchoLines(stderr, toStdErr: true)
+    script += "exit /b \(exitCode)\n"
+    return script
   }
-  return output
-}
 
-private func escapeForCmdEcho(_ value: String) -> String {
-  var escaped = ""
-  for character in value {
-    switch character {
-    case "%":
-      escaped.append("%%")
-    case "^", "&", "|", "<", ">":
-      escaped.append("^")
-      escaped.append(character)
-    default:
-      escaped.append(character)
+  private func windowsEchoLines(_ message: String, toStdErr: Bool) -> String {
+    guard !message.isEmpty else { return "" }
+    let lines = message.split(whereSeparator: \.isNewline)
+    var output = ""
+    for line in lines {
+      let escaped = escapeForCmdEcho(String(line))
+      if toStdErr {
+        output += "echo \(escaped) 1>&2\n"
+      } else {
+        output += "echo \(escaped)\n"
+      }
     }
+    return output
   }
-  return escaped
-}
+
+  private func escapeForCmdEcho(_ value: String) -> String {
+    var escaped = ""
+    for character in value {
+      switch character {
+      case "%":
+        escaped.append("%%")
+      case "^", "&", "|", "<", ">":
+        escaped.append("^")
+        escaped.append(character)
+      default:
+        escaped.append(character)
+      }
+    }
+    return escaped
+  }
 #else
-private func makeUnixGitStub(stdout: String, stderr: String, exitCode: Int32) -> String {
-  var script = "#!/bin/sh\n"
-  if !stdout.isEmpty {
-    script += "cat <<'GIT_STDOUT'\n\(stdout)\nGIT_STDOUT\n"
+  private func makeUnixGitStub(stdout: String, stderr: String, exitCode: Int32) -> String {
+    var script = "#!/bin/sh\n"
+    if !stdout.isEmpty {
+      script += "cat <<'GIT_STDOUT'\n\(stdout)\nGIT_STDOUT\n"
+    }
+    if !stderr.isEmpty {
+      script += "cat <<'GIT_STDERR' 1>&2\n\(stderr)\nGIT_STDERR\n"
+    }
+    script += "exit \(exitCode)\n"
+    return script
   }
-  if !stderr.isEmpty {
-    script += "cat <<'GIT_STDERR' 1>&2\n\(stderr)\nGIT_STDERR\n"
-  }
-  script += "exit \(exitCode)\n"
-  return script
-}
 #endif
 
 private struct GitTestHarness {
@@ -297,12 +301,14 @@ private struct GitTestHarness {
   let commitTimestamp = TimeInterval(1_700_000_000)
 
   init() throws {
-    guard let resolved = InfoCollector.resolveGitExecutableURL(
-      environment: ProcessInfo.processInfo.environment
-    ) else {
+    guard
+      let resolved = InfoCollector.resolveGitExecutableURL(
+        environment: ProcessInfo.processInfo.environment,
+      )
+    else {
       throw XCTSkip("git executable not available in PATH")
     }
-    self.gitURL = resolved
+    gitURL = resolved
   }
 
   var commitDate: Date {
@@ -344,7 +350,7 @@ private struct GitTestHarness {
     _ = try runGit(
       arguments: ["clone", "--bare", source.path, destination.path],
       in: parent,
-      environment: [:]
+      environment: [:],
     )
   }
 
@@ -352,32 +358,33 @@ private struct GitTestHarness {
   private func runGit(
     arguments: [String],
     in directory: URL,
-    environment: [String: String]
+    environment: [String: String],
   ) throws -> GitResult {
     let process = Process()
 
     var fullEnvironment = ProcessInfo.processInfo.environment
     fullEnvironment["LC_ALL"] = "C"
-    environment.forEach { key, value in
+    for (key, value) in environment {
       fullEnvironment[key] = value
     }
     process.environment = fullEnvironment
 
-#if os(Windows)
-    if isCommandScript(gitURL) {
-      guard let commandInterpreter = resolveCommandInterpreter(environment: fullEnvironment) else {
-        throw XCTSkip("cmd.exe not available to run git script")
+    #if os(Windows)
+      if isCommandScript(gitURL) {
+        guard let commandInterpreter = resolveCommandInterpreter(environment: fullEnvironment)
+        else {
+          throw XCTSkip("cmd.exe not available to run git script")
+        }
+        process.executableURL = commandInterpreter
+        process.arguments = ["/C", gitURL.path] + arguments
+      } else {
+        process.executableURL = gitURL
+        process.arguments = arguments
       }
-      process.executableURL = commandInterpreter
-      process.arguments = ["/C", gitURL.path] + arguments
-    } else {
+    #else
       process.executableURL = gitURL
       process.arguments = arguments
-    }
-#else
-    process.executableURL = gitURL
-    process.arguments = arguments
-#endif
+    #endif
     process.currentDirectoryURL = directory
 
     let stdoutPipe = Pipe()
@@ -389,9 +396,11 @@ private struct GitTestHarness {
     process.waitUntilExit()
 
     let stdout = String(
-      decoding: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+      decoding: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self,
+    )
     let stderr = String(
-      decoding: stderrPipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+      decoding: stderrPipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self,
+    )
     let result = GitResult(stdout: stdout, stderr: stderr, exitCode: process.terminationStatus)
 
     guard result.exitCode == 0 else {
@@ -403,42 +412,42 @@ private struct GitTestHarness {
 }
 
 #if os(Windows)
-private func isCommandScript(_ url: URL) -> Bool {
-  let ext = url.pathExtension.lowercased()
-  return ext == "cmd" || ext == "bat"
-}
-
-private func resolveCommandInterpreter(environment: [String: String]) -> URL? {
-  if let comspec = environment["COMSPEC"], !comspec.isEmpty {
-    let expanded = (comspec as NSString).expandingTildeInPath
-    if expanded.contains("/") || expanded.contains("\\") {
-      let url = URL(fileURLWithPath: expanded)
-      if FileManager.default.fileExists(atPath: url.path) {
-        return url
-      }
-    }
+  private func isCommandScript(_ url: URL) -> Bool {
+    let ext = url.pathExtension.lowercased()
+    return ext == "cmd" || ext == "bat"
   }
 
-  guard let pathValue = environment["PATH"], !pathValue.isEmpty else {
+  private func resolveCommandInterpreter(environment: [String: String]) -> URL? {
+    if let comspec = environment["COMSPEC"], !comspec.isEmpty {
+      let expanded = (comspec as NSString).expandingTildeInPath
+      if expanded.contains("/") || expanded.contains("\\") {
+        let url = URL(fileURLWithPath: expanded)
+        if FileManager.default.fileExists(atPath: url.path) {
+          return url
+        }
+      }
+    }
+
+    guard let pathValue = environment["PATH"], !pathValue.isEmpty else {
+      return nil
+    }
+
+    let candidates = ["cmd.exe", "cmd"]
+    for entry in pathValue.split(separator: ";") {
+      let trimmed = String(entry).trimmingCharacters(in: .whitespacesAndNewlines)
+        .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+      guard !trimmed.isEmpty else { continue }
+      let baseURL = URL(fileURLWithPath: trimmed, isDirectory: true)
+      for candidate in candidates {
+        let url = baseURL.appendingPathComponent(candidate)
+        if FileManager.default.fileExists(atPath: url.path) {
+          return url
+        }
+      }
+    }
+
     return nil
   }
-
-  let candidates = ["cmd.exe", "cmd"]
-  for entry in pathValue.split(separator: ";") {
-    let trimmed = String(entry).trimmingCharacters(in: .whitespacesAndNewlines)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-    guard !trimmed.isEmpty else { continue }
-    let baseURL = URL(fileURLWithPath: trimmed, isDirectory: true)
-    for candidate in candidates {
-      let url = baseURL.appendingPathComponent(candidate)
-      if FileManager.default.fileExists(atPath: url.path) {
-        return url
-      }
-    }
-  }
-
-  return nil
-}
 #endif
 
 private struct GitResult {
